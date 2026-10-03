@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codex Workbench</title>
+    <style>
+      body {
+        background-color: #0f172a; /* slate-900 */
+        color: #e2e8f0; /* slate-200 */
+      }
+      /* Custom scrollbar for better aesthetics */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1e293b; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #475569; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #64748b; 
+      }
+      .gradient-text {
+        background: linear-gradient(to right, #c084fc, #6366f1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      
+      /* 3D Cube Utilities */
+      .perspective-1000 {
+        perspective: 1000px;
+      }
+      .transform-style-3d {
+        transform-style: preserve-3d;
+      }
+      .backface-hidden {
+        backface-visibility: hidden;
+      }
+      .rotate-x-90 {
+        transform: rotateX(90deg);
+      }
+      .rotate-x-neg-90 {
+        transform: rotateX(-90deg);
+      }
+      .rotate-y-90 {
+        transform: rotateY(90deg);
+      }
+      .rotate-y-neg-90 {
+        transform: rotateY(-90deg);
+      }
+      .rotate-y-180 {
+        transform: rotateY(180deg);
+      }
+    </style>
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

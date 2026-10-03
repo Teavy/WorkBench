@@ -1,0 +1,26 @@
+{
+  "name": "codex-view-synthesizer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite preview",
+    "package": "node scripts/package.mjs",
+    "test": "node --test --test-isolation=none tests/*.test.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.563.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

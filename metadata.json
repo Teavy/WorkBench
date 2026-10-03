@@ -1,0 +1,6 @@
+{
+  "name": "Codex View Synthesizer",
+  "description": "Choose a camera angle and prepare a local image-editing job for Codex.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
