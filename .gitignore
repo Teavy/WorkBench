@@ -11,6 +11,9 @@ node_modules
 dist
 release
 .view-jobs
+chroma-projects/
+.chroma-smoke-*/
+.codex/environments/
 dist-ssr
 *.local
 

@@ -9,6 +9,7 @@ import { parseConfig } from './config.mjs';
 import { convertVideo, previewFrame, probeVideo } from './ffmpeg.mjs';
 import { createJobDirectory, defaultOutputDirectory, removeJobDirectory, safeOutputName, saveWebpToDownloads, validateOutputDirectory } from './files.mjs';
 import { openDirectory, pickOutputDirectory, revealFile } from './shell.mjs';
+import { blendBetween, blendLoop, createProject, deleteProject, deleteProjectBackground, deleteProjectMask, exportProject, generateProject, listProjects, readFrame, readFrameMask, readProfile, readProject, readProjectBackground, readProjectMask, readProjectSource, readProjectSourceInfo, relinkProjectSource, replaceProjectSource, saveProfile, undoLoopBlend, updateProject, uploadFrameMask, uploadProjectBackground, uploadProjectMask, uploadProjectSource } from './frameProjects.mjs';
 
 const jobs = new Map();
 const savedFiles = new Set();
@@ -81,6 +82,122 @@ async function processJob(job) {
 export async function chromaHandler(req, res, next = () => json(res, 404, { error: 'Endpoint not found.' })) {
   const pathname = new URL(req.url || '/', 'http://localhost').pathname;
   try {
+    if (pathname === '/projects' && req.method === 'GET') return json(res, 200, { projects: await listProjects() });
+    if (pathname === '/projects' && req.method === 'POST') {
+      if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local project request header.' });
+      const request = JSON.parse((await body(req, 64 * 1024)).toString());
+      return json(res, 201, await createProject(request.name, request.config, request.outputDirectory, request.temporary === true, request.deferGeneration === true));
+    }
+    const projectMatch = /^\/projects\/([a-f0-9-]{36})(?:\/(source|relink-source|source-info|export|generate|loop-blend|between-blend|undo-loop-blend|profile|background|mask|frame-masks|frame-masks\/[a-f0-9]{64}|frames\/\d+))?$/.exec(pathname);
+    if (projectMatch) {
+      const [, id, action] = projectMatch;
+      if (!action && req.method === 'GET') return json(res, 200, await readProject(id));
+      if (!action && req.method === 'DELETE') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local project request header.' });
+        await deleteProject(id, new URL(req.url, 'http://localhost').searchParams.get('permanent') === '1');
+        return json(res, 200, { ok: true });
+      }
+      if (!action && req.method === 'PATCH') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local project request header.' });
+        const request = JSON.parse((await body(req, 8 * 1024 * 1024)).toString());
+        return json(res, 200, await updateProject(id, request.slots, request.outputDirectory));
+      }
+      if (action === 'profile' && req.method === 'GET') return json(res, 200, { saved: await readProfile(id) });
+      if (action === 'profile' && req.method === 'PUT') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local profile request header.' });
+        return json(res, 200, await saveProfile(id, JSON.parse((await body(req, 64 * 1024)).toString())));
+      }
+      if (action === 'generate' && req.method === 'POST') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local project request header.' });
+        const request = JSON.parse((await body(req, 64 * 1024)).toString());
+        return json(res, 202, await generateProject(id, request.config));
+      }
+      if (action === 'loop-blend' && req.method === 'POST') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local project request header.' });
+        const request = JSON.parse((await body(req, 16 * 1024)).toString());
+        return json(res, 200, await blendLoop(id, request.overlap));
+      }
+      if (action === 'between-blend' && req.method === 'POST') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local project request header.' });
+        const request = JSON.parse((await body(req, 16 * 1024)).toString());
+        return json(res, 200, await blendBetween(id, request.firstIndex, request.secondIndex, request.steps));
+      }
+      if (action === 'undo-loop-blend' && req.method === 'POST') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local project request header.' });
+        return json(res, 200, await undoLoopBlend(id));
+      }
+      if (action === 'background' && req.method === 'PUT') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local background request header.' });
+        return json(res, 201, await uploadProjectBackground(id, req, new URL(req.url, 'http://localhost').searchParams.get('name')));
+      }
+      if (action === 'background' && req.method === 'DELETE') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local background request header.' });
+        return json(res, 200, await deleteProjectBackground(id));
+      }
+      if (action === 'background' && req.method === 'GET') {
+        const image = await readProjectBackground(id);
+        const saved = await readProfile(id);
+        const extension = path.extname(saved?.profile?.backgroundName || '').toLowerCase();
+        const mime = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.png': 'image/png' }[extension] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': mime, 'Content-Length': image.size, 'Cache-Control': 'no-store' });
+        return image.stream.pipe(res);
+      }
+      if (action === 'mask' && req.method === 'PUT') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local mask request header.' });
+        return json(res, 200, await uploadProjectMask(id, req));
+      }
+      if (action === 'mask' && req.method === 'DELETE') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local mask request header.' });
+        return json(res, 200, await deleteProjectMask(id));
+      }
+      if (action === 'mask' && req.method === 'GET') {
+        const mask = await readProjectMask(id);
+        if (!mask) return json(res, 404, { error: 'This project has no output mask.' });
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': mask.size, 'Cache-Control': 'no-store' });
+        return mask.stream.pipe(res);
+      }
+      if (action === 'frame-masks' && req.method === 'POST') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local frame mask request header.' });
+        return json(res, 201, await uploadFrameMask(id, req));
+      }
+      if (action?.startsWith('frame-masks/') && req.method === 'GET') {
+        const mask = await readFrameMask(id, action.slice('frame-masks/'.length));
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': mask.size, 'Cache-Control': 'no-store' });
+        return mask.stream.pipe(res);
+      }
+      if (action === 'source' && req.method === 'PUT') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local project request header.' });
+        const url = new URL(req.url, 'http://localhost');
+        if (url.searchParams.get('replace') === '1') {
+          return json(res, 200, await replaceProjectSource(id, req, url.searchParams.get('name')));
+        }
+        await uploadProjectSource(id, req);
+        return json(res, 202, { ok: true });
+      }
+      if (action === 'relink-source' && req.method === 'PUT') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local project request header.' });
+        return json(res, 200, await relinkProjectSource(id, req));
+      }
+      if (action === 'source' && req.method === 'GET') {
+        const source = await readProjectSource(id);
+        res.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': source.size, 'Cache-Control': 'no-store' });
+        return source.stream.pipe(res);
+      }
+      if (action === 'source-info' && req.method === 'GET') return json(res, 200, await readProjectSourceInfo(id));
+      if (action?.startsWith('frames/') && req.method === 'GET') {
+        const number = Number(action.slice(7));
+        const stream = await readFrame(id, number);
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' });
+        return stream.pipe(res);
+      }
+      if (action === 'export' && req.method === 'POST') {
+        if (req.headers['x-chroma-save'] !== '1') return json(res, 403, { error: 'Missing local export request header.' });
+        const request = JSON.parse((await body(req, 16 * 1024)).toString());
+        const result = await exportProject(id, request.format, request.rows, request.directory, request.order, request.maskProjectId || id);
+        savedFiles.add(result.path);
+        return json(res, 201, result);
+      }
+    }
     if (pathname === '/preview' && req.method === 'POST') {
       const url = new URL(req.url, 'http://localhost');
       const config = parseConfig(JSON.parse(url.searchParams.get('config') || '{}'));

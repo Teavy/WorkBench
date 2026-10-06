@@ -18,13 +18,13 @@ function run(command, args, input, signal) {
 }
 
 export async function probeVideo(file, signal) {
-  const result = await run(ffprobe, ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height,r_frame_rate,duration:format=duration', '-of', 'json', file], null, signal);
+  const result = await run(ffprobe, ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height,r_frame_rate,avg_frame_rate,duration:format=duration', '-of', 'json', file], null, signal);
   const info = JSON.parse(result.toString());
   const stream = info.streams?.[0];
   if (!stream) throw new Error('The file has no video stream.');
   const duration = Number(stream.duration || info.format?.duration);
   if (!Number.isFinite(duration) || duration <= 0) throw new Error('Could not read video duration.');
-  return { duration, width: stream.width, height: stream.height, frameRate: stream.r_frame_rate };
+  return { duration, width: stream.width, height: stream.height, frameRate: stream.avg_frame_rate || stream.r_frame_rate };
 }
 
 export async function previewFrame(png, config, signal) {

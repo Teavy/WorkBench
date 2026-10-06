@@ -43,8 +43,11 @@ export function filterFor(config, dimensions, preview = false) {
   const color = `0x${config.color.slice(1)}`;
   const filters = [];
   if (!preview && (config.startFrame > 1 || config.endFrame !== null)) {
-    const end = config.endFrame === null ? '' : `:end_frame=${config.endFrame}`;
-    filters.push(`trim=start_frame=${config.startFrame - 1}${end}`, 'setpts=PTS-STARTPTS');
+    // The timeline indexes time using sourceFps, which may differ from the
+    // encoded video rate. Trim by that same time to keep preview and export aligned.
+    const start = (config.startFrame - 1) / config.sourceFps;
+    const end = config.endFrame === null ? '' : `:end=${config.endFrame / config.sourceFps}`;
+    filters.push('setpts=PTS-STARTPTS', `trim=start=${start}${end}`, 'setpts=PTS-STARTPTS');
   }
   filters.push('format=rgba', `colorkey=${color}:${config.similarity}:${config.blend}`);
   if (!preview) filters.push(`fps=${config.fps}`);
