@@ -1,5 +1,8 @@
 # Codex Workbench
 
+<img width="2517" height="1267" alt="局部截取_20261024_063223" src="https://github.com/user-attachments/assets/5f7347c8-e802-4e2b-b5a8-6db257d83677" />
+<img width="2532" height="1263" alt="局部截取_20261024_063336" src="https://github.com/user-attachments/assets/7d59567f-fece-4a50-a64d-14b94c69c008" />
+
 Module requirements and technical design: [View Synthesizer PRD + TDD](docs/view-synthesizer-prd-tdd.md) · [Workflow Canvas PRD + TDD](docs/workflow-canvas-prd-tdd.md) · MP4 BG Removal [PRD](docs/PRD-mp4-background-removal/PRD.md), [TDD](docs/PRD-mp4-background-removal/TDD.md), and [verification](docs/PRD-mp4-background-removal/verification.md).
 
 The local app has three modules, selected from the top navigation:
